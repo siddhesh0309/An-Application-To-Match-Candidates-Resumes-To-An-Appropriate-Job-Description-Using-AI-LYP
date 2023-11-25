@@ -1,4 +1,6 @@
 # An-Application-To-Match-Candidates-Resumes-To-An-Appropriate-Job-Description-Using-AI-LYP
+# Problem Definition
+In today’s world recruitment has become a tedious process and talent acquisition is essential for all companies irrespective of the size of their business. If there is an opening for a position In the firm, millions of people will send their resumes to the company to apply for that position. It is a tough task for a company's recruiters to manually look through hundreds of resumes and choose the best prospects for the position. Our web application is developed in such a way that it makes the hiring process considerably easier and simpler. This web application helps us to find the skill score and then rank the candidates resumes, process all the available job descriptions and maintain the key skill set requirement. Finally it compare the resumes and job descriptions and measure the percent suitability. 
 # Web-Page Screen
 ![WhatsApp Image 2023-11-25 at 10 16 47 PM](https://github.com/siddhesh0309/An-Application-To-Match-Candidates-Resumes-To-An-Appropriate-Job-Description-Using-AI-LYP/assets/66249282/679ae09b-7601-44b1-b7a1-47883a17e0ac)
 # About Us
