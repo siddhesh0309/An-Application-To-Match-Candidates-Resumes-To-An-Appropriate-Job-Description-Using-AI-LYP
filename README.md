@@ -20,7 +20,8 @@ In today’s world recruitment has become a tedious process and talent acquisiti
 # Post Job
 ![WhatsApp Image 2023-11-25 at 10 16 47 PM (8)](https://github.com/siddhesh0309/An-Application-To-Match-Candidates-Resumes-To-An-Appropriate-Job-Description-Using-AI-LYP/assets/66249282/3cf20eb2-4968-4951-b76d-53d63af6ab6d)
 # Contributer
-[Tanuj Joshi](https://github.com/tanuj0911) //
+[Tanuj Joshi](https://github.com/tanuj0911)
+##
 [Siddhesh Parkhe](https://github.com/siddhesh0309)
 # Conclusion
 In this study, an web based AI CV Ranker application has been developed to find the percentage suitability between the posted JD and uploaded CV. The application not only does the matching but also displays the rank of each resumes according their score using BERT and KNN model. The models have been trained using our own dataset and has attained an accuracy of around 93.85% and 79.00% respectively. This project has helped us develop a new perspective for commonly used machine learning algorithms and to extract more than just predictions. The natural language processing toolkit (NLTK) and KNN algorithms, have been helpful in carrying out the results. Also, working with huge unstructured data, with a variety of forms was a challenge, especially to extract correct information from it. Moreover, Pandas, Numpy, Matplotlib and Sklearn were other Python libraries that were used.
