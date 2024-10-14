@@ -1,0 +1,183 @@
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support import expected_conditions as EC
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import Select
+from time import sleep
+import shutil, os, glob, datetime, pandas as pd
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.proxy import Proxy, ProxyType
+from string import punctuation
+from datetime import datetime, timedelta
+
+time_based_subfolder = "AMFI_Performance_Reports" + datetime.strftime(
+    datetime.now(), "%d%m%Y%H_%M_%S"
+)
+download_directory = os.path.join(os.getcwd(), time_based_subfolder)
+
+# Make sure the directory exists
+if not os.path.exists(download_directory):
+    os.makedirs(download_directory)
+
+# Set Chrome options to set the default download directory
+options = Options()
+# options.add_argument("--headless")
+options.add_argument("--ignore-certificate-errors")
+options.add_experimental_option(
+    "prefs",
+    {
+        "download.default_directory": download_directory,
+        "download.directory_upgrade": True,
+    },
+)
+
+
+def multiple_dfs(df_list, sheets, file_name, spaces):
+    writer = pd.ExcelWriter(file_name, engine="xlsxwriter")
+    row = 0
+    for dataframe in df_list:
+        dataframe.to_excel(writer, sheet_name=sheets, startrow=row, startcol=0)
+        row = row + len(dataframe.index) + spaces + 1
+    writer.close()
+
+
+service = Service(
+    "C:/Users/SIDDHESH/OneDrive/Desktop/HSBC DOC/chromedriver-win64/chromedriver.exe"
+)
+driver = webdriver.Chrome(service=service, options=options)
+
+try:
+    driver.get(
+        "https://www.amfiindia.com/research-information/other-data/mf-scheme-performance-details"
+    )
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "//iframe"))
+    )
+    iframe = driver.find_element(By.XPATH, "//iframe")
+    driver.switch_to.frame(iframe)
+
+    entities_list = []
+    sub_entities_list = []
+    Funds_data = []
+    headers_list = []
+
+    entity = driver.find_elements(
+        By.XPATH, "/html/body/form/div/div/div[2]/div[1]/div[1]/select/option"
+    )
+    categories = driver.find_elements(
+        By.XPATH, "/html/body/form/div/div/div[3]/div[1]/div[1]/select/option"
+    )
+    funds = driver.find_elements(
+        By.XPATH, "/html/body/form/div/div/div[4]/div[1]/div[1]/select/option"
+    )
+    headers = driver.find_elements(
+        By.XPATH, "//html/body/form/div/div/div[1]/div[1]/div[1]/select/option"
+    )
+
+    sleep(20)
+    for i in headers:
+        if i.get_attribute("text") != "Select Type":
+            headers_list.append(i.get_attribute("text"))
+
+    for i in funds:
+        Funds_data.append(i.get_attribute("text"))
+
+    for i in entity:
+        if i.get_attribute("text") != "Select Category":
+            entities_list.append(i.get_attribute("text"))
+
+    for i in categories:
+        if i.get_attribute("text") != "Sub Category":
+            sub_entities_list.append(i.get_attribute("text"))
+
+    # Prompt the user to manually input the start and end dates
+    start_date_str = input("Enter start date (DD-MM-YYYY): ")
+    end_date_str = input("Enter end date (DD-MM-YYYY): ")
+    sleep(40)
+    # Convert the user input to datetime objects
+    start_date = datetime.strptime(start_date_str, "%d-%m-%Y")
+    end_date = datetime.strptime(end_date_str, "%d-%m-%Y")
+
+    # Iterate through the date range
+    current_date = start_date
+
+    while current_date <= end_date:
+        date_str = current_date.strftime("%d-%m-%Y")
+        print(f"Processing for date: {date_str}")
+
+        # Input the date into the date field
+        date_field = driver.find_element(
+            By.XPATH, "//html[1]/body[1]/form[1]/div/div[1]/div[5]/div/input"
+        )
+        date_field.clear()
+        date_field.send_keys(date_str)
+
+        for header in headers_list:
+            if header == "Open-ended":
+                for i in range(len(entities_list)):
+                    print("----", entities_list[i])
+                    try:
+                        # Entity Button
+                        driver.find_element(
+                            By.XPATH,
+                            "/html/body/form/div/div/div[2]/div[1]/div[1]/button",
+                        ).click()
+                        # select entity
+                        driver.find_element(
+                            By.XPATH,
+                            "/html/body/div[2]/div/ul/li[" + str(i + 1) + "]/a/span[1]",
+                        ).click()
+                        for j in range(len(sub_entities_list)):
+                            try:
+                                driver.find_element(
+                                    By.XPATH,
+                                    "/html/body/form/div/div/div[3]/div[1]/div[1]/button",
+                                ).click()
+                                driver.find_element(
+                                    By.XPATH,
+                                    "/html/body/div[2]/div/ul/li[" + str(j + 1) + "]/a",
+                                ).click()
+
+                                print("Downloading: ", sub_entities_list[j])
+                                driver.find_element(
+                                    By.XPATH, "//button[@type='submit']"
+                                ).click()
+                                driver.find_element(
+                                    By.XPATH, ".//a[@id='download-report-excel']"
+                                ).click()
+                                sleep(3)
+                                files = glob.glob(download_directory + "/*")
+                                max_file = max(files, key=os.path.getmtime)
+                                filename = max_file.split("/")[-1].split(".")[0]
+                                if "fund-performance" in filename:
+                                    try:
+                                        new_path = max_file.replace(
+                                            filename,
+                                            header
+                                            + "--"
+                                            + entities_list[i]
+                                            + "--"
+                                            + sub_entities_list[j].translate(
+                                                str.maketrans("", "", punctuation)
+                                            )
+                                            + "--"
+                                            + date_str,
+                                        )
+                                        os.rename(max_file, new_path)
+                                        shutil.move(new_path, download_directory)
+                                    except Exception as e:
+                                        print(e)
+                            except:
+                                pass
+                    except:
+                        pass
+
+        # Move to the next day
+        current_date += timedelta(days=1)
+
+    driver.close()
+
+except Exception as e:
+    print(e)
+    driver.close()
