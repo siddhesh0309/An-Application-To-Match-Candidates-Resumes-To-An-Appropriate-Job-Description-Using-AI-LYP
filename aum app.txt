@@ -1,0 +1,13 @@
+from fastapi import FastAPI, HTTPException
+from selenium_automation import start_selenium_automation
+
+app = FastAPI()
+
+
+@app.get("/start-automation")
+def start_automation(from_date: str = None, to_date: str = None):
+    try:
+        message = start_selenium_automation(from_date, to_date)
+        return {"message": message}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

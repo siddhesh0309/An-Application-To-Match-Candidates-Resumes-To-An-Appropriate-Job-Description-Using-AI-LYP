@@ -1,0 +1,217 @@
+# from fastapi import FastAPI, HTTPException, Query
+# from selenium.webdriver.chrome.service import Service
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.chrome.options import Options
+# from selenium import webdriver
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.support.wait import WebDriverWait
+# import shutil, os, glob, datetime, pandas as pd
+# import xlwings as xw
+# from time import sleep
+
+# # Initialize FastAPI app
+# app = FastAPI()
+
+
+# # Function to configure the download directory and Chrome options
+# def configure_chrome():
+#     time_based_subfolder = "AMFI_AUM_Reports" + datetime.datetime.strftime(
+#         datetime.datetime.now(), "_%d%m%Y_%H%M%S"
+#     )
+#     download_directory = os.path.join(os.getcwd(), time_based_subfolder)
+
+#     if not os.path.exists(download_directory):
+#         os.makedirs(download_directory)
+
+#     options = Options()
+#     options.add_argument("--headless=new")
+#     options.add_argument("--ignore-certificate-errors")
+#     options.add_experimental_option(
+#         "prefs",
+#         {
+#             "download.default_directory": download_directory,
+#             "download.directory_upgrade": True,
+#         },
+#     )
+
+#     service = Service(
+#         "C:/Users/SIDDHESH/OneDrive/Desktop/HSBC DOC/chromedriver-win64/chromedriver.exe"
+#     )
+#     driver = webdriver.Chrome(service=service, options=options)
+
+#     return driver, download_directory
+
+
+# # Function to perform the month-based calculations
+# def cal_for_month(months_year_list, driver, download_directory, xw_app):
+#     for i in range(len(months_year_list)):
+#         if months_year_list[i] != "Select Month":
+#             print("Current Month", months_year_list[i])
+#             driver.find_element(
+#                 By.XPATH, ".//div[@class='aum-select-wrap']/div[1]/span/input"
+#             ).clear()
+#             driver.find_element(
+#                 By.XPATH, ".//div[@class='aum-select-wrap']/div[1]/span/input"
+#             ).send_keys(months_year_list[i])
+
+#             AumType = driver.find_elements(
+#                 By.XPATH, ".//div[@id='divAumType']/select/option"
+#             )
+#             for option in range(len(AumType)):
+#                 if AumType[option].get_attribute("text") == "Scheme category wise":
+#                     driver.find_element(
+#                         By.XPATH, ".//div[@class='aum-select-wrap']/div[2]/span/input"
+#                     ).clear()
+#                     driver.find_element(
+#                         By.XPATH, ".//div[@class='aum-select-wrap']/div[2]/span/input"
+#                     ).send_keys(AumType[option].get_attribute("text"))
+
+#                     AumMFName = driver.find_elements(
+#                         By.XPATH, ".//div[@id='divAumMFName']/select/option"
+#                     )
+#                     for option in range(len(AumMFName)):
+#                         if AumMFName[option].get_attribute("text") not in [
+#                             "--Select Mutual Fund--"
+#                         ]:
+#                             try:
+#                                 driver.find_element(
+#                                     By.XPATH,
+#                                     ".//div[@class='aum-select-wrap']/div[3]/span/input",
+#                                 ).clear()
+#                                 driver.find_element(
+#                                     By.XPATH,
+#                                     ".//div[@class='aum-select-wrap']/div[3]/span/input",
+#                                 ).send_keys(AumMFName[option].get_attribute("text"))
+#                                 driver.find_element(
+#                                     By.XPATH, ".//a[@id='hrfGo']"
+#                                 ).click()
+#                                 sleep(2.5)
+
+#                                 WebDriverWait(driver, 2).until(
+#                                     EC.presence_of_element_located(
+#                                         (
+#                                             By.XPATH,
+#                                             ".//div[@id='AAUMTable']/div/form/input[2]",
+#                                         )
+#                                     )
+#                                 )
+#                                 driver.find_element(
+#                                     By.XPATH,
+#                                     ".//div[@id='AAUMTable']/div/form/input[2]",
+#                                 ).click()
+#                                 sleep(4)
+
+#                                 files = glob.glob(download_directory + "/*")
+#                                 max_file = max(files, key=os.path.getmtime)
+
+#                                 filename = max_file.split("/")[-1].split(".")[0]
+#                                 if "AMFI_Reports" in filename:
+#                                     new_path = max_file.replace(
+#                                         filename,
+#                                         AumMFName[option]
+#                                         .get_attribute("text")
+#                                         .replace(" ", "_"),
+#                                     )
+#                                     os.rename(max_file, new_path)
+#                                     new_filename = (
+#                                         "AAUM--"
+#                                         + new_path.replace(".xls", "")
+#                                         + "--"
+#                                         + months_year_list[i]
+#                                         + ".xlsx"
+#                                     )
+
+#                                     wb = xw_app.books.open(new_path)
+#                                     wb.save(new_filename)
+#                                     wb.close()
+
+#                                     shutil.move(new_filename, download_directory)
+#                                     os.remove(new_path)
+#                             except Exception as e:
+#                                 print(e)
+
+
+# # FastAPI route to trigger the scraping based on date range or last working month
+# @app.get("/download-aum-reports/")
+# async def download_aum_reports(
+#     from_date: str = Query(None, description="From month & year (e.g., June 2024)"),
+#     to_date: str = Query(None, description="To month & year (e.g., July 2024)"),
+# ):
+#     # Initialize variables
+#     driver = None
+#     xw_app = None  # Ensure xw_app is defined even if an exception occurs early
+
+#     try:
+#         # Initialize Chrome and download directory
+#         driver, download_directory = configure_chrome()
+#         xw_app = xw.App(visible=False)  # xlwings app initialized here
+
+#         # Open the AMFI page
+#         driver.get(
+#             "https://www.amfiindia.com/research-information/aum-data/classified-average-aum"
+#         )
+#         driver.maximize_window()
+
+#         # Get available months and years
+#         months_year = []
+#         for i in driver.find_elements(
+#             By.XPATH, ".//div[@id='divAumPeriod']/select/option"
+#         ):
+#             if i.get_attribute("text") != "Select Month":
+#                 months_year.append(i.get_attribute("text"))
+
+#         # Check if the user has provided a date range
+#         if from_date and to_date:
+#             # Convert user input dates into months and years
+#             daterange = pd.date_range(from_date, to_date, freq="MS", inclusive="left")
+#             months_year_list = [
+#                 datetime.datetime.strftime(i, "%B - %Y") for i in daterange
+#             ]
+
+#             if (
+#                 months_year_list[0] in months_year
+#                 and months_year_list[-1] in months_year
+#             ):
+#                 # Perform the data extraction
+#                 cal_for_month(months_year_list, driver, download_directory, xw_app)
+#             else:
+#                 raise HTTPException(status_code=400, detail="Date out of range")
+#         else:
+#             # Use the last available month as the default if no dates are provided
+#             last_month = months_year[
+#                 0
+#             ]  # Assuming the last available month is at the first index
+#             months_year_list = [last_month]
+#             cal_for_month(months_year_list, driver, download_directory, xw_app)
+
+#         driver.close()
+#         xw_app.kill()
+
+#         return {"message": "Files Downloaded Successfully"}
+
+#     except Exception as e:
+#         if xw_app:
+#             xw_app.kill()  # Ensure xlwings app is killed if an exception occurs
+#         if driver:
+#             driver.close()  # Close the driver as well if it was initialized
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+from fastapi import FastAPI, HTTPException, Query
+from scraper import scrape_aum_data
+
+# Initialize FastAPI app
+app = FastAPI()
+
+
+# FastAPI route to trigger the scraping based on date range or last working month
+@app.get("/download-aum-reports/")
+async def download_aum_reports(
+    from_date: str = Query(None, description="From month & year (e.g., June 2024)"),
+    to_date: str = Query(None, description="To month & year (e.g., July 2024)"),
+):
+    try:
+        result = scrape_aum_data(from_date=from_date, to_date=to_date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
