@@ -470,3 +470,36 @@ def start_selenium_automation(from_date=None, to_date=None):
     except Exception as e:
         xw_app.kill()
         raise Exception(f"Error occurred: {str(e)}")
+
+
+import fitz  # PyMuPDF
+
+def compress_pdf(input_pdf, output_pdf, image_quality=80):
+    # Open the input PDF
+    pdf_document = fitz.open(input_pdf)
+    
+    # Iterate through the pages and extract images
+    for page_num in range(pdf_document.page_count):
+        page = pdf_document.load_page(page_num)
+        images = page.get_images(full=True)
+        
+        for image_index, img in enumerate(images):
+            xref = img[0]
+            pix = fitz.Pixmap(pdf_document, xref)
+            
+            # Compress image if it's not already a mask image (which should remain uncompressed)
+            if pix.n < 5:  # this is to ignore images that are already compressed or are masks
+                pix = fitz.Pixmap(fitz.csRGB, pix) if pix.n > 1 else pix
+                new_img = pix.tobytes("jpeg", quality=image_quality)  # Compress to jpeg
+                pdf_document.update_image(xref, new_img)
+    
+    # Save the output PDF
+    pdf_document.save(output_pdf, incremental=False, encryption=fitz.PDF_ENCRYPT_KEEP)
+    pdf_document.close()
+    print(f"PDF compressed and saved to {output_pdf}")
+
+# Usage
+input_pdf_path = "input.pdf"  # Replace with your input PDF path
+output_pdf_path = "compressed_output.pdf"  # Replace with your output PDF path
+compress_pdf(input_pdf_path, output_pdf_path)
+
