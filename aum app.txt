@@ -11,3 +11,47 @@ def start_automation(from_date: str = None, to_date: str = None):
         return {"message": message}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+import fitz  # PyMuPDF
+
+def compress_pdf(input_pdf, output_pdf, image_quality=80):
+    # Open the input PDF
+    pdf_document = fitz.open(input_pdf)
+    
+    # Iterate through the pages and extract images
+    for page_num in range(pdf_document.page_count):
+        page = pdf_document.load_page(page_num)
+        images = page.get_images(full=True)
+        
+        for img in images:
+            xref = img[0]  # xref of the image
+            pix = fitz.Pixmap(pdf_document, xref)
+            
+            # Compress image if it's not a mask image
+            if pix.n < 5:  # this is to ignore images that are already compressed or are masks
+                if pix.n > 1:  # this checks if it's not grayscale
+                    pix = fitz.Pixmap(fitz.csRGB, pix)  # Convert to RGB if necessary
+                
+                # Save the compressed image to a temporary file with JPEG compression
+                pix.save(f"compressed_image.jpg", quality=image_quality)
+                
+                # Read the compressed image back into bytes
+                with open("compressed_image.jpg", "rb") as img_file:
+                    compressed_image_bytes = img_file.read()
+                
+                # Replace the original image with the compressed one
+                pdf_document.update_image(xref, compressed_image_bytes)
+    
+    # Save the output PDF
+    pdf_document.save(output_pdf, incremental=False, encryption=fitz.PDF_ENCRYPT_KEEP)
+    pdf_document.close()
+    print(f"PDF compressed and saved to {output_pdf}")
+
+# Example usage
+input_pdf_path = "C:/path/to/your/input.pdf"  # Replace with your input PDF path
+output_pdf_path = "C:/path/to/your/compressed_output.pdf"  # Replace with your output PDF path
+compress_pdf(input_pdf_path, output_pdf_path)
+
