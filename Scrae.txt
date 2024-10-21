@@ -187,3 +187,16 @@ def scrape_aum_data(from_date=None, to_date=None):
         if driver:
             driver.close()  # Close the driver as well if it was initialized
         raise Exception(f"Error Occurred: {str(e)}")
+
+
+ClearCollect(
+    CalendarEvents,
+    Office365Outlook.CalendarGetItems(
+        EmailInput.Text,
+        {
+            start: DateTimeValue(Today()),
+            end: DateTimeValue(DateAdd(Today(), 7, Days))
+        }
+    )
+)
+
